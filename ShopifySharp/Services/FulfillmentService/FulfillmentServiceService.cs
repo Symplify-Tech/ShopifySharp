@@ -81,6 +81,22 @@ namespace ShopifySharp
             return response.Result;
         }
 
+
+
+        public virtual async Task<FulfillmentServiceEntity> UpdateTrackingAsync(long fulfillmentServiceId, FulfillmentServiceEntity fulfillmentServiceEntity, CancellationToken cancellationToken = default)
+        {
+            var req = PrepareRequest($"fulfillments/{fulfillmentServiceId}/update_tracking.json");
+            var body = fulfillmentServiceEntity.ToDictionary();
+
+            var content = new JsonContent(new
+            {
+                fulfillment = body
+            });
+
+            var response = await ExecuteRequestAsync<FulfillmentServiceEntity>(req, HttpMethod.Put, cancellationToken, content, "fulfillment_service");
+            return response.Result;
+        }
+
         /// <summary>
         /// Deletes a fulfillment service with the given Id.
         /// </summary>
