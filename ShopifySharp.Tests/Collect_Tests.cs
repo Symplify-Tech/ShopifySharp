@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using ShopifySharp.Filters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ShopifySharp.Tests
 {
@@ -12,10 +13,12 @@ namespace ShopifySharp.Tests
     public class Collect_Tests : IClassFixture<Collect_Tests_Fixture>
     {
         private Collect_Tests_Fixture Fixture { get; }
+        private readonly ITestOutputHelper _testOutputHelper;
 
-        public Collect_Tests(Collect_Tests_Fixture fixture)
+        public Collect_Tests(Collect_Tests_Fixture fixture, ITestOutputHelper testOutputHelper)
         {
             this.Fixture = fixture;
+            _testOutputHelper = testOutputHelper;
         }
 
         [Fact]
@@ -70,7 +73,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.Write($"{nameof(Deletes_Collects)} failed. {ex.Message}.");
+                _testOutputHelper.WriteLine($"{nameof(Deletes_Collects)} failed. {ex.Message}.");
 
                 thrown = true;
             }
@@ -114,9 +117,11 @@ namespace ShopifySharp.Tests
             CustomCollectionService.SetExecutionPolicy(policy);
 
             // Create a collection to use with these tests.
+            var collectionHandle = Guid.NewGuid().ToString();
             var collection = await CustomCollectionService.CreateAsync(new CustomCollection()
             {
                 Title = "Things",
+                Handle = collectionHandle,
                 Published = false,
                 Image = new CustomCollectionImage()
                 {

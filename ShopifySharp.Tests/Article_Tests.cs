@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 using EmptyAssert = ShopifySharp.Tests.Extensions.EmptyExtensions;
 
 namespace ShopifySharp.Tests
@@ -12,10 +13,12 @@ namespace ShopifySharp.Tests
     public class Article_Tests : IClassFixture<Article_Tests_Fixture>
     {
         private Article_Tests_Fixture Fixture { get; }
+        private readonly ITestOutputHelper _testOutputHelper;
 
-        public Article_Tests(Article_Tests_Fixture fixture)
+        public Article_Tests(Article_Tests_Fixture fixture, ITestOutputHelper testOutputHelper)
         {
             this.Fixture = fixture;
+            _testOutputHelper = testOutputHelper;
         }
 
         [Fact]
@@ -52,7 +55,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.WriteLine($"{nameof(Deletes_Articles)} threw exception. {ex.Message}");
+                _testOutputHelper.WriteLine($"{nameof(Deletes_Articles)} threw exception. {ex.Message}");
 
                 threw = true;
             }
@@ -93,21 +96,16 @@ namespace ShopifySharp.Tests
             Assert.True(tags.Count() > 0);
         }
 
+        [Fact]
         public async Task Updates_Articles()
         {
-            string html = "<h1>Updated!</h1>";
+            var html = "<h1>Updated!</h1>";
             var article = await Fixture.Create();
-            long id = article.Id.Value;
 
             article.BodyHtml = html;
-            article.Id = null;
+            article = await Fixture.Service.UpdateAsync(Fixture.BlogId.Value, article.Id.Value, article);
 
-            article = await Fixture.Service.UpdateAsync(Fixture.BlogId.Value, id, article);
-
-            // Reset the id so the Fixture can properly delete this object.
-            article.Id = id;
-
-            Assert.Equal(article.BodyHtml, html);
+            Assert.Equal(html, article.BodyHtml);
         }
     }
 

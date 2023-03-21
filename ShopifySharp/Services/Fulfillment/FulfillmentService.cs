@@ -56,6 +56,16 @@ namespace ShopifySharp
         }
 
         /// <summary>
+        /// Gets a list of the fulfillment order's fulfillments.
+        /// </summary>
+        /// <param name="fulfillmentOrderId">The fulfillment order id to which the fulfillments belong.</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        public virtual async Task<ListResult<Fulfillment>> ListForFulfillmentOrderAsync(long fulfillmentOrderId, CancellationToken cancellationToken = default)
+        {
+            return await ExecuteGetListAsync($"fulfillment_orders/{fulfillmentOrderId}/fulfillments.json", "fulfillments", ListFilter<Fulfillment>.Empty, cancellationToken);
+        }
+
+        /// <summary>
         /// Retrieves the <see cref="Fulfillment"/> with the given id.
         /// </summary>
         /// <param name="orderId">The order id to which the fulfillments belong.</param>
@@ -67,17 +77,16 @@ namespace ShopifySharp
         {
             return await ExecuteGetAsync<Fulfillment>($"orders/{orderId}/fulfillments/{fulfillmentId}.json", "fulfillment", fields, cancellationToken);
         }
-
+        
         /// <summary>
-        /// Creates a new <see cref="Fulfillment"/> on the order.
+        /// Creates a fulfillment for one or many fulfillment orders.
         /// </summary>
-        /// <param name="orderId">The order id to which the fulfillments belong.</param>
-        /// <param name="fulfillment">A new <see cref="Fulfillment"/>. Id should be set to null.</param>
+        /// <param name="fulfillment">An object containing fulfillment order and tracking data.</param>
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns>The new <see cref="Fulfillment"/>.</returns>
-        public virtual async Task<Fulfillment> CreateAsync(long orderId, Fulfillment fulfillment, CancellationToken cancellationToken = default)
+        public virtual async Task<Fulfillment> CreateAsync(FulfillmentShipping fulfillment, CancellationToken cancellationToken = default)
         {
-            var req = PrepareRequest($"orders/{orderId}/fulfillments.json");
+            var req = PrepareRequest($"fulfillments.json");
             var body = fulfillment.ToDictionary();
 
             var content = new JsonContent(new
@@ -90,65 +99,22 @@ namespace ShopifySharp
         }
 
         /// <summary>
-        /// Updates the given <see cref="Fulfillment"/>.
+        /// Updates tracking for the given <see cref="Fulfillment"/>.
         /// </summary>
-        /// <param name="orderId">The order id to which the fulfillments belong.</param>
         /// <param name="fulfillmentId">Id of the object being updated.</param>
         /// <param name="fulfillment">The <see cref="Fulfillment"/> to update.</param>
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns>The updated <see cref="Fulfillment"/>.</returns>
-        public virtual async Task<Fulfillment> UpdateAsync(long orderId, long fulfillmentId, Fulfillment fulfillment, CancellationToken cancellationToken = default)
+        public virtual async Task<Fulfillment> UpdateTrackingAsync(long fulfillmentId, FulfillmentShipping fulfillment, CancellationToken cancellationToken = default)
         {
-            var req = PrepareRequest($"orders/{orderId}/fulfillments/{fulfillmentId}.json");
+            var req = PrepareRequest($"fulfillments/{fulfillmentId}/update_tracking.json");
             var body = fulfillment.ToDictionary();
             var content = new JsonContent(new
             {
                 fulfillment = body
             });
 
-            var response = await ExecuteRequestAsync<Fulfillment>(req, HttpMethod.Put, cancellationToken, content, "fulfillment");
-            return response.Result;
-        }
-
-        /// <summary>
-        /// Completes a pending fulfillment with the given id.
-        /// </summary>
-        /// <param name="orderId">The order id to which the fulfillments belong.</param>
-        /// <param name="fulfillmentId">The fulfillment's id.</param>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        public virtual async Task<Fulfillment> CompleteAsync(long orderId, long fulfillmentId, CancellationToken cancellationToken = default)
-        {
-            var req = PrepareRequest($"orders/{orderId}/fulfillments/{fulfillmentId}/complete.json");
-
-            var response = await ExecuteRequestAsync<Fulfillment>(req, HttpMethod.Post, cancellationToken, rootElement: "fulfillment");
-            return response.Result;
-        }
-
-        /// <summary>
-        /// Cancels a pending fulfillment with the given id.
-        /// </summary>
-        /// <param name="orderId">The order id to which the fulfillments belong.</param>
-        /// <param name="fulfillmentId">The fulfillment's id.</param>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        public virtual async Task<Fulfillment> CancelAsync(long orderId, long fulfillmentId, CancellationToken cancellationToken = default)
-        {
-            var req = PrepareRequest($"orders/{orderId}/fulfillments/{fulfillmentId}/cancel.json");
-
-            var response = await ExecuteRequestAsync<Fulfillment>(req, HttpMethod.Post, cancellationToken, rootElement: "fulfillment");
-            return response.Result;
-        }
-
-        /// <summary>
-        /// Opens a pending fulfillment with the given id.
-        /// </summary>
-        /// <param name="orderId">The order id to which the fulfillments belong.</param>
-        /// <param name="fulfillmentId">The fulfillment's id.</param>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        public virtual async Task<Fulfillment> OpenAsync(long orderId, long fulfillmentId, CancellationToken cancellationToken = default)
-        {
-            var req = PrepareRequest($"orders/{orderId}/fulfillments/{fulfillmentId}/open.json");
-
-            var response = await ExecuteRequestAsync<Fulfillment>(req, HttpMethod.Post, cancellationToken, rootElement: "fulfillment");
+            var response = await ExecuteRequestAsync<Fulfillment>(req, HttpMethod.Post, cancellationToken, content, "fulfillment");
             return response.Result;
         }
     }

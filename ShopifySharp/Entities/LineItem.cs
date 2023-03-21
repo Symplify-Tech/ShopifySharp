@@ -118,7 +118,7 @@ namespace ShopifySharp
         /// <summary>
         /// The payment gateway used to tender the tip, such as shopify_payments. Present only on tips.
         /// </summary>
-        [JsonProperty("tip_payment_gateway")]
+        [JsonProperty("tip_payment_gateway", NullValueHandling = NullValueHandling.Include)]
         public string TipPaymentGateway { get; set; }
 
         /// <summary>
@@ -187,16 +187,22 @@ namespace ShopifySharp
         public PriceSet PriceSet { get; set; }
 
         /// <summary>
+        /// The price per item, excluding taxes and excluding discounts.
+        /// </summary>
+        [JsonProperty("pre_tax_price")]
+        public decimal? PreTaxPrice { get; set; }
+
+        /// <summary>
+        /// The price per item, excluding taxes and excluding discounts in shop and presentment currencies.
+        /// </summary>
+        [JsonProperty("pre_tax_price_set")]
+        public PriceSet PreTaxPriceSet { get; set; }
+        
+        /// <summary>
         /// A list of duty objects, each containing information about a duty on the line item
         /// </summary>
         [JsonProperty("duties")]
         public IEnumerable<LineItemDuty> Duties { get; set; }
-
-        /// <summary>
-        /// The location of the line item's fulfillment origin.
-        /// </summary>
-        [JsonProperty("origin_location")]
-        public LineItemOriginLocation OriginLocation { get; set; }
 
         /// <summary>
         /// A unique identifier for a quantity of items within a single fulfillment. An order can have multiple fulfillment line items.

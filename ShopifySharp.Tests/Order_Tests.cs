@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using ShopifySharp.Filters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ShopifySharp.Tests
 {
@@ -12,10 +13,12 @@ namespace ShopifySharp.Tests
     public class Order_Tests : IClassFixture<Order_Tests_Fixture>
     {
         private Order_Tests_Fixture Fixture { get; }
+        private readonly ITestOutputHelper _testOutputHelper;
 
-        public Order_Tests(Order_Tests_Fixture fixture)
+        public Order_Tests(Order_Tests_Fixture fixture, ITestOutputHelper testOutputHelper)
         {
             this.Fixture = fixture;
+            _testOutputHelper = testOutputHelper;
         }
 
         [Fact]
@@ -59,7 +62,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.WriteLine($"{nameof(Deletes_Orders)} failed. {ex.Message}");
+                _testOutputHelper.WriteLine($"{nameof(Deletes_Orders)} failed. {ex.Message}");
 
                 threw = true;
             }
@@ -135,7 +138,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.WriteLine($"{nameof(Cancels_Orders)} failed. {ex.Message}");
+                _testOutputHelper.WriteLine($"{nameof(Cancels_Orders)} failed. {ex.Message}");
 
                 threw = true;
             }
@@ -158,7 +161,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.WriteLine($"{nameof(Cancels_Orders_With_Options)} failed. {ex.Message}");
+                _testOutputHelper.WriteLine($"{nameof(Cancels_Orders_With_Options)} failed. {ex.Message}");
 
                 threw = true;
             }
@@ -178,7 +181,7 @@ namespace ShopifySharp.Tests
             }
             catch (ShopifyException ex)
             {
-                Console.WriteLine($"{nameof(Gets_Metafields)} failed. {ex.Message}");
+                _testOutputHelper.WriteLine($"{nameof(Gets_Metafields)} failed. {ex.Message}");
 
                 threw = true;
             }
@@ -201,6 +204,24 @@ namespace ShopifySharp.Tests
 
             // In previous versions of ShopifySharp, the updated JSON would have sent 'email=null', clearing out the email address.
             Assert.Equal(created.Email, updated.Email);
+        }
+
+        [Fact]
+        public void TipPaymentGatewaySpecified_GetDeserialized()
+        {
+            string orderJson = @"{
+  ""id"": 123,
+  ""line_items"": [
+    {
+      ""id"": 123,
+      ""tip_payment_gateway"": null
+    }
+  ]
+}
+";
+            var order = Infrastructure.Serializer.Deserialize<Order>(orderJson);
+            Assert.Null(order.LineItems.First().TipPaymentGateway);
+            Assert.True(order.LineItems.First().TipPaymentGatewaySpecified);
         }
     }
 
@@ -282,6 +303,7 @@ namespace ShopifySharp.Tests
                 TotalPrice = 5.00m,
                 Email = Guid.NewGuid().ToString() + "@example.com",
                 Note = Note,
+                Test = true
             });
 
             if (!skipAddToCreateList)

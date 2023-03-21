@@ -2,33 +2,11 @@ using Newtonsoft.Json;
 using ShopifySharp.Converters;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ShopifySharp
 {
     public class Customer : ShopifyObject
     {
-        /// <summary>
-        /// Indicates whether the customer has consented to be sent marketing material via email.
-        /// </summary>
-        [JsonProperty("accepts_marketing")]
-        public bool? AcceptsMarketing { get; set; }
-        
-        /// <summary>
-        /// The date and time when the customer consented or objected to receiving marketing material by email. Set this value whenever the customer consents or objects to marketing materials.
-        /// </summary>
-        [JsonProperty("accepts_marketing_updated_at")]
-        [JsonConverter(typeof(InvalidDateToNullConverter))]
-        public DateTimeOffset? AcceptsMarketingUpdatedAt { get; set; }
-        
-        /// <summary>
-        /// The marketing subscription opt-in level (as described by the M3AAWG best practices guideline) that the customer gave when they consented to receive marketing material by email. If the customer does not accept email marketing, then this property will be set to null. Valid values: single_opt_in, confirmed_opt_in, unknown.
-        /// </summary>
-        [JsonProperty("marketing_opt_in_level")]
-        public string MarketingOptInLevel { get; set; }
-        
         /// <summary>
         /// A list of addresses for the customer.
         /// </summary>
@@ -78,7 +56,8 @@ namespace ShopifySharp
         public string LastName { get; set; }
 
         /// <summary>
-        /// The id of the customer's last order.
+        /// The id of the customer's last order. 
+        /// **Note**: this value is deprecated specifically when the customer is returned using the Orders API. In that case, the value will always be null. The property is still available via the Customers API.
         /// </summary>
         /// <remarks>Property can be null or longer than max int32 value. Set to nullable long instead.</remarks>
         [JsonProperty("last_order_id")]
@@ -86,6 +65,7 @@ namespace ShopifySharp
 
         /// <summary>
         /// The name of the customer's last order. This is directly related to the Order's name field.
+        /// **Note**: this value is deprecated specifically when the customer is returned using the Orders API. In that case, the value will always be null. The property is still available via the Customers API.
         /// </summary>
         [JsonProperty("last_order_name")]
         public string LastOrderName { get; set; }
@@ -98,6 +78,7 @@ namespace ShopifySharp
 
         /// <summary>
         /// The number of orders associated with this customer.
+        /// **Note**: this value is deprecated specifically when the customer is returned using the Orders API. In that case, the value will always be null. The property is still available via the Customers API.
         /// </summary>
         [JsonProperty("orders_count")]
         public int? OrdersCount { get; set; }
@@ -144,6 +125,7 @@ namespace ShopifySharp
 
         /// <summary>
         /// The total amount of money that the customer has spent at the shop.
+        /// **Note**: this value is deprecated specifically when the customer is returned using the Orders API. In that case, the value will always be null. The property is still available via the Customers API.
         /// </summary>
         /// <remarks>The Shopify API actually returns this value as a string, but Json.Net can automatically convert to decimal.</remarks>
         [JsonProperty("total_spent")]
@@ -174,5 +156,11 @@ namespace ShopifySharp
         /// </summary>
         [JsonProperty("metafields")]
         public IEnumerable<MetaField> Metafields { get; set; }
+
+        /// <summary>
+        /// The marketing consent information when the customer consented to receiving marketing material by email. The email property is required to create a customer with email consent information and to update a customer for email consent that doesn't have an email recorded.
+        /// </summary>
+        [JsonProperty("email_marketing_consent")]
+        public CustomerEmailMarketingConsent EmailMarketingConsent { get; set; }
     }
 }

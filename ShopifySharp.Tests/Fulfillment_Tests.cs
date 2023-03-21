@@ -62,6 +62,17 @@ namespace ShopifySharp.Tests
         }
 
         [Fact]
+        public async Task Lists_Fulfillments_For_A_FulfillmentOrder()
+        {
+            long orderId = Fixture.Created.First().OrderId.Value;
+            var fulfillmentOrder = await Fixture.GetFulfillmentOrder(orderId);
+            long fulfillmentOrderId = fulfillmentOrder.Id.Value;
+            var list = await Fixture.Service.ListForFulfillmentOrderAsync(fulfillmentOrderId);
+
+            Assert.True(list.Items.Any());
+        }
+
+        [Fact]
         public async Task Gets_Fulfillments()
         {
             // Find an id 
@@ -86,7 +97,7 @@ namespace ShopifySharp.Tests
         public async Task Creates_Fulfillments_With_Tracking_Number()
         {
             var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value, false);
+            var created = await Fixture.Create(order.Id.Value);
             
             Assert.NotNull(created);
             Assert.True(created.Id.HasValue);
@@ -99,89 +110,10 @@ namespace ShopifySharp.Tests
         }
 
         [Fact]
-        public async Task Creates_Fulfillments_With_Unrecognized_Tracking_Number()
-        {
-            // If you create a fulfillment without a tracking company, Shopify will try to parse the tracking number
-            // to figure out the shipping company. If it doesn't recognize it, the tracking numbers will still be 
-            // populated -- and will still appear in the order dashboard -- but there will be no tracking URLs
-            // or tracking company. 
-            
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Service.CreateAsync(order.Id.Value, new Fulfillment
-            {
-                TrackingNumbers = new []{ "shopify_wont_recognize_this" },
-                TrackingUrl = null,
-                TrackingCompany = null,
-                NotifyCustomer = false,
-                LocationId = Fixture.LocationId
-            });
-            
-            // Add created fulfillment to fixture's created list so it can clean them up after test run
-            Fixture.Created.Add(created);
-            
-            Assert.NotNull(created);
-            Assert.True(created.Id.HasValue);
-            Assert.Equal("success", created.Status);
-            Assert.NotEmpty(created.TrackingNumber);
-            Assert.NotEmpty(created.TrackingNumbers);
-            Assert.Null(created.TrackingCompany);
-            Assert.Null(created.TrackingUrl);
-            Assert.Empty(created.TrackingUrls);
-        }
-
-        [Fact]
-        public async Task Creates_Fulfillments_With_Unrecognized_Tracking_Number_And_Url()
-        {
-            // If you create a fulfillment without a tracking company, Shopify will try to parse the tracking number
-            // to figure out the shipping company. If it doesn't recognize it, the tracking numbers will still be 
-            // populated -- and will still appear in the order dashboard -- but there will be no tracking URLs
-            // or tracking company **unless you add a URL when creating the fulfillment**.
-            
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Service.CreateAsync(order.Id.Value, new Fulfillment
-            {
-                TrackingNumbers = new []{ "shopify_wont_recognize_this" },
-                TrackingUrl = "https://example.com/my-custom-tracking-url/with-tracking-number",
-                TrackingCompany = null,
-                NotifyCustomer = false,
-                LocationId = Fixture.LocationId
-            });
-            
-            // Add created fulfillment to fixture's created list so it can clean them up after test run
-            Fixture.Created.Add(created);
-            
-            Assert.NotNull(created);
-            Assert.True(created.Id.HasValue);
-            Assert.Equal("success", created.Status);
-            Assert.NotEmpty(created.TrackingNumber);
-            Assert.NotEmpty(created.TrackingNumbers);
-            Assert.Null(created.TrackingCompany);
-            Assert.Equal("https://example.com/my-custom-tracking-url/with-tracking-number", created.TrackingUrl);
-            Assert.NotEmpty(created.TrackingUrls);
-        }
-
-        [Fact]
-        public async Task Creates_Fulfillments_With_Tracking_Numbers()
-        {
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value, true);
-
-            Assert.NotNull(created);
-            Assert.True(created.Id.HasValue);
-            Assert.Equal("success", created.Status);
-            Assert.True(created.TrackingNumbers.Count() > 1);
-        }
-
-        [Fact]
         public async Task Creates_Partial_Fulfillments()
         {
             var order = await Fixture.CreateOrder();
-            var lineItem = order.LineItems.First();
-
-            // A partial fulfillment does not fulfill the entire line item quantity
-            lineItem.Quantity -= 1;
-
-            var created = await Fixture.Create(order.Id.Value, false, new LineItem[] { lineItem });
+            var created = await Fixture.Create(order.Id.Value, partialFulfillment: true);
 
             Assert.NotNull(created);
             Assert.True(created.Id.HasValue);
@@ -189,60 +121,43 @@ namespace ShopifySharp.Tests
         }
 
         [Fact]
-        public async Task Updates_Fulfillments()
+        public async Task Updates_Tracking_Fulfillments()
         {
             string company = "Auntie Dot's Shipping Company";
+            string trackingNum = "123456789";
+            string trackingUrl = "https://example.com/123456789";
             var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value, false);
+            var created = await Fixture.Create(order.Id.Value);
             long id = created.Id.Value;
 
-            created.TrackingCompany = company;
-            created.Id = null;
+            var update = new FulfillmentShipping()
+            {
+                NotifyCustomer = true,
+                TrackingInfo = new TrackingInfo()
+                {
+                    Company = company,
+                    Number = trackingNum,
+                    Url = trackingUrl,
+                }
+            };
 
-            var updated = await Fixture.Service.UpdateAsync(created.OrderId.Value, id, created);
-
-            // Reset the id so the Fixture can properly delete this object.
-            created.Id = id;
+            var updated = await Fixture.Service.UpdateTrackingAsync(id, update);
 
             Assert.Equal(company, updated.TrackingCompany);
-        }
-
-        [Fact(Skip = "Can't complete/cancel/open a fulfillment whose status is not 'pending'. It's not clear how to create a fulfillment that's pending.")]
-        public async Task Opens_Fulfillments()
-        {
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value);
-            var opened = await Fixture.Service.OpenAsync(order.Id.Value, created.Id.Value);
-
-            Assert.Equal("open", opened.Status);
-        }
-
-        [Fact(Skip = "Can't complete/cancel/open a fulfillment whose status is not 'pending'. It's not clear how to create a fulfillment that's pending.")]
-        public async Task Cancels_Fulfillments()
-        {
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value);
-            var cancelled = await Fixture.Service.CancelAsync(order.Id.Value, created.Id.Value);
-
-            Assert.Equal("cancelled", cancelled.Status);
-        }
-
-        [Fact(Skip = "Can't complete/cancel/open a fulfillment whose status is not 'pending'. It's not clear how to create a fulfillment that's pending.")]
-        public async Task Completes_Fulfillments()
-        {
-            var order = await Fixture.CreateOrder();
-            var created = await Fixture.Create(order.Id.Value);
-            var cancelled = await Fixture.Service.CancelAsync(order.Id.Value, created.Id.Value);
-
-            Assert.Equal("success", cancelled.Status);
+            Assert.Equal(trackingNum, updated.TrackingNumber);
+            Assert.Equal(trackingUrl, updated.TrackingUrl);
+            Assert.Single(updated.TrackingNumbers);
+            Assert.Single(updated.TrackingUrls);
+            Assert.Equal(trackingNum, updated.TrackingNumbers.First());
+            Assert.Equal(trackingUrl, updated.TrackingUrls.First());
         }
     }
 
     public class Fulfillment_Tests_Fixture : IAsyncLifetime
     {
         public FulfillmentService Service { get; } = new FulfillmentService(Utils.MyShopifyUrl, Utils.AccessToken);
-
-        public OrderService OrderService { get; } = new OrderService(Utils.MyShopifyUrl, Utils.AccessToken);
+        private OrderService OrderService { get; } = new OrderService(Utils.MyShopifyUrl, Utils.AccessToken);
+        private FulfillmentOrderService FulfillmentOrderService { get; } = new FulfillmentOrderService(Utils.MyShopifyUrl, Utils.AccessToken);
 
         public long LocationId => 6226758;
 
@@ -260,6 +175,7 @@ namespace ShopifySharp.Tests
 
             Service.SetExecutionPolicy(policy);
             OrderService.SetExecutionPolicy(policy);
+            FulfillmentOrderService.SetExecutionPolicy(policy);
 
             // Create an order and fulfillment for count, list, get, etc. tests.
             var order = await CreateOrder();
@@ -276,7 +192,10 @@ namespace ShopifySharp.Tests
                 }
                 catch (ShopifyException ex)
                 {
-                    Console.WriteLine($"Failed to delete order with id {obj.Id.Value}. {ex.Message}");
+                    if ((int)ex.HttpStatusCode != 404)
+                    {
+                        Console.WriteLine($"Failed to delete order with id {obj.Id.Value}. {ex.Message}");
+                    }
                 }
             }
         }
@@ -322,6 +241,7 @@ namespace ShopifySharp.Tests
                 TotalPrice = 5.00m,
                 Email = Guid.NewGuid().ToString() + "@example.com",
                 Note = "Test note about the customer.",
+                Test = true
             }, new OrderCreateOptions()
             {
                 SendReceipt = false,
@@ -333,51 +253,49 @@ namespace ShopifySharp.Tests
             return obj;
         }
 
-        public async Task<Fulfillment> Create(long orderId, bool multipleTrackingNumbers = false, IEnumerable<LineItem> items = null)
+        public async Task<IEnumerable<FulfillmentOrder>> ListFulfillmentOrders(long orderId)
         {
-            Fulfillment fulfillment;
+            var orders = await FulfillmentOrderService.ListAsync(orderId);
 
-            if (multipleTrackingNumbers)
+            return orders;
+        }
+
+        public async Task<Fulfillment> Create(long orderId, bool partialFulfillment = false)
+        {
+            var fulfillmentOrders = await ListFulfillmentOrders(orderId);
+            var lineItems = fulfillmentOrders.Select(o => new LineItemsByFulfillmentOrder
             {
-                fulfillment = new Fulfillment()
-                {
-                    TrackingCompany = "Jack Black's Pack, Stack and Track",
-                    TrackingUrls = new string[]
+                FulfillmentOrderId = o.Id.Value,
+                FulfillmentRequestOrderLineItems = partialFulfillment == false
+                    ? null
+                    : o.FulfillmentOrderLineItems.Select(li => new FulfillmentRequestOrderLineItem
                     {
-                        "https://example.com/da10038ee679f9afc93a785cafdd8d52",
-                        "https://example.com/6349a40313ae3c7544331ff9fb44f28c",
-                        "https://example.com/ca0b2d7bcccec4b58a94a24fa04101d3"
-                    },
-                    TrackingNumbers = new string[]
-                    {
-                        "da10038ee679f9afc93a785cafdd8d52",
-                        "6349a40313ae3c7544331ff9fb44f28c",
-                        "ca0b2d7bcccec4b58a94a24fa04101d3"
-                    }
-                };
-            }
-            else
+                        Id = li.Id,
+                        Quantity = li.FulfillableQuantity - 1
+                    })
+            });
+            var fulfillment = await Service.CreateAsync(new FulfillmentShipping
             {
-                fulfillment = new Fulfillment()
+                Message = "Items are shipping now!",
+                FulfillmentRequestOrderLineItems = lineItems,
+                NotifyCustomer = false,
+                TrackingInfo = new TrackingInfo
                 {
-                    TrackingCompany = "Jack Black's Pack, Stack and Track",
-                    TrackingUrl = "https://example.com/123456789",
-                    TrackingNumber = "123456789",
-                };
-            }
-
-            if (items != null)
-            {
-                fulfillment.LineItems = items;
-            }
-
-            fulfillment.NotifyCustomer = false;
-            fulfillment.LocationId = LocationId;
-            fulfillment = await Service.CreateAsync(orderId, fulfillment);
+                    Company = "Jack Black's Pack, Stack and Track",
+                    Url = "https://example.com/123456789",
+                    Number = "123456789"
+                }
+            });
 
             Created.Add(fulfillment);
 
             return fulfillment;
+        }
+
+        public async Task<FulfillmentOrder> GetFulfillmentOrder(long orderId)
+        {
+            var list = await FulfillmentOrderService.ListAsync(orderId);
+            return list.First();
         }
     }
 }

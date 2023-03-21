@@ -3,7 +3,7 @@
     <TargetFrameworks>NET48</TargetFrameworks>
     <AssemblyName>ShopifySharp</AssemblyName>
     <RootNamespace>ShopifySharp</RootNamespace>
-    <VersionPrefix>5.15.0</VersionPrefix>
+    <VersionPrefix>6.0.1</VersionPrefix>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -20,7 +20,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="2.1.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="all" />
+<<<<<<< HEAD
     <PackageReference Include="newtonsoft.json" Version="13.0.1" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
+=======
+    <PackageReference Include="newtonsoft.json" Version="13.0.2" />
+>>>>>>> e4b6c9de052dfe3335cc773883cabff510c74530
   </ItemGroup>
 </Project>

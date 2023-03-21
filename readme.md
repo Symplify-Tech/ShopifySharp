@@ -61,47 +61,46 @@ Shopify has begun versioning their API, meaning new features are locked behind n
 | 5.6.0 - 5.7.0        | 2020-07             |
 | 5.8.0 - 5.10.0       | 2020-10             |
 | 5.11.0 - 5.13.1      | 2021-07             |
-| 5.14.0 and above     | 2021-10             |
+| 5.14.0 - 5.15.0      | 2021-10             |
+| 5.16.0 - 5.18.11     | 2022-04             |
+| 5.19.0 - 5.19.1      | 2022-07             |
+| 6.0.1 and above      | 2023-01             |
 
 **Note:** ShopifySharp dropped support for .NET Framework 4.5 in version 5.14.0. [More details in #438.](https://github.com/nozzlegear/ShopifySharp/issues/438)
 
-# Migrating from version 4.x to version 5.0.0
-
-**A complete migration guide for going from v4.x to v5.x is located here:** [https://nozzlegear.com/shopify/shopifysharp-version-5-migration-guide](https://nozzlegear.com/shopify/shopifysharp-version-5-migration-guide). The biggest change by far is the way you'll list objects in v5. Shopify has implemented a sort of "linked list" pagination, which means you _cannot_ request arbitrary pages any longer (e.g. "give me page 5 of orders").
-
-Instead, you now have to walk through each page, following the link from one page to the next, to get where you need to go. As long as Shopify is caching the results, this should improve the speed with which your application can list large swathes of objects at once (e.g. when importing all of a user's orders into your application). However, this makes things like letting your users navigate to an arbitrary page of orders in your app impossible. At best, you'll only be able to show links to the next page or previous page.
-
-An example for listing all orders on a Shopify shop:
-
-```cs
-var allOrders = new List<Order>();
-var service = new OrderService(domain, accessToken);
-var page = await service.ListAsync(new OrderListFilter
-{
-    Limit = 250,
-});
-
-while (true)
-{
-    allOrders.AddRange(page.Items);
-
-    if (!page.HasNextPage)
-    {
-        break;
-    }
-
-    page = await service.ListAsync(page.GetNextPageFilter());
-}
-```
-
-You can also [check this issue for commonly asked questions about v5.0](https://github.com/nozzlegear/ShopifySharp/issues/462).
+**A migration guide for migrating from ShopifySharp 5.x to ShopifySharp 6.0+ is coming soon.**
 
 # Frequently Asked Questions
 
-- **Question**: How do I look up a Shopify order by its name?
-    - **Answer**: [See this article to learn how to look up a Shopify order by its name property.](https://nozzlegear.com/shopify/looking-up-a-shopify-order-by-its-name)
-- **Question**: How do I use ShopifySharp with a private app?
-    - **Answer**: ShopifySharp works with any private Shopify app, no extra configuration needed. All you need to do is pass in your private app's password wherever ShopifySharp asks for an access token. For example: `var service = new ShopifySharp.OrderService("mydomain.myshopify.com", "PRIVATE APP PASSWORD HERE")`. This package's test suite uses a private app for testing API calls, so this method is confirmed working.
+### Question: How do I contribute to ShopifySharp?
+
+[Check out our contribution guide!](https://github.com/nozzlegear/ShopifySharp/blob/master/docs/contribution-guide.md) Is the guide missing anything? Please let me know by opening an issue!
+
+### Question: How do I look up a Shopify order by its name?
+
+[See this article to learn how to look up a Shopify order by its name property.](https://nozzlegear.com/shopify/looking-up-a-shopify-order-by-its-name)
+
+### Question: How do I use ShopifySharp with a private app?
+
+ShopifySharp works with any private Shopify app, no extra configuration needed. All you need to do is pass in your private app's password wherever ShopifySharp asks for an access token. For example: `var service = new ShopifySharp.OrderService("mydomain.myshopify.com", "PRIVATE APP PASSWORD HERE")`. This package's test suite uses a private app for testing API calls, so this method is confirmed working.
+
+### Question: X method or Y endpoint randomly 404s/throws exceptions for some shops.
+
+Make sure that you're always using a \*.myshopify.com domain! While a "real" domain like "example.com" will often work with the API, there are some API endpoints that will randomly return redirects or 404s if you aren't using the \*.myshopify.com domain. [See this post by @dnatabar](https://github.com/nozzlegear/ShopifySharp/issues/286#issuecomment-1248952763) and [this post by @flgatormike](https://github.com/nozzlegear/ShopifySharp/issues/723#issuecomment-1074623062) for more information.
+
+### Question: Updating a product (or other object) unpublishes it?
+
+This is an issue related to the serialization of default property values in dotnet. As developers, we often want to update only a small subset of properties on an object. However, any property that is not explicitly given a value in dotnet will instead be initialized and serialized with its default value. 
+
+For the `Product.PublishedAt` property, this default value is `null`. Setting `PublishedAt` to `null` will **unpublish** the product, removing it from the storefront and making it unavailable for puchase. The fix is to first pull in the product with the API and then update its properties.
+
+```cs
+var product = await productService.GetAsync(productId);
+product.SomeProperty = newValue;
+product = await productService.UpdateAsync(productId, product);
+```
+
+We're looking for feedback on methods to improve object updating and property serialization in ShopifySharp. [You can offer feedback here](https://github.com/nozzlegear/ShopifySharp/issues/388), and check out these issues ([#284](https://github.com/nozzlegear/ShopifySharp/issues/284), [#367](https://github.com/nozzlegear/ShopifySharp/issues/367), [#373](https://github.com/nozzlegear/ShopifySharp/issues/373), [#379](https://github.com/nozzlegear/ShopifySharp/issues/379), [#642](https://github.com/nozzlegear/ShopifySharp/issues/642)) for further history on the problem.
 
 # A work-in-progress
 
@@ -109,48 +108,92 @@ I first started working on ShopifySharp because .NET developers need a fully-fea
 
 ShopifySharp currently supports the following Shopify APIs:
 
--   [OAuth authentication](#authorization-and-authentication).
--   [Application charges (in-app purchases)](#one-time-application-charges)
--   [Recurring application charges (subscriptions)](#recurring-application-charges-charge-shop-owners-to-use-your-app)
--   [Usage charges](#usage-charges)
--   [Shops](#shops)
--   [Customers](#customers)
--   [Orders](#orders)
--   [Products](#products)
--   [Webhooks](#webhooks)
--   [Script Tags](#script-tags)
--   [Assets](#assets)
--   [Themes](#themes)
--   [Redirects](#redirects)
--   [Collects](#collects)
--   [Fulfillments](#fulfillments)
--   Fulfillment Events (docs not yet written) (List/Get only. Create/Delete not implemented yet)
--   [Transactions](#transactions)
--   [Pages](#pages)
+-   Access
+    -   [OAuth authentication](#authorization-and-authentication).
+    -   [Access Scopes](#access-scopes)
+    -   [StorefrontAccessTokens](#storefrontaccesstokens)
+-   Analytics
+    -   Report (not implimented yet)
+-   Billing
+    -   [Application charges (in-app purchases)](#one-time-application-charges)
+    -   [Application Credits](#application-credits)
+    -   [Recurring application charges (subscriptions)](#recurring-application-charges-charge-shop-owners-to-use-your-app)
+    -   [Usage charges](#usage-charges)
+-   Customers
+    -   [Customers](#customers)
+    -   Customer Address (docs not yet written)
+    -   Customer Saved Search (docs not yet written)
+-   Discounts
+    -   [Discounts](#discounts)
+    -   [Price Rules](#price-rules)
+-   Events
+    -   [Events](#events)
+    -   [Webhooks](#webhooks)
+-   Inventory  
+    -   Inventory Item (docs not yet written)
+    -   Inventory Level (docs not yet written)
+    -   [Locations](#locations)
+-   Marketing Event (not implimented yet)
 -   [Metafields](#metafields)
--   [Custom Collections](#custom-collections)
--   [Product Images](#product-images)
--   [Locations](#locations)
--   [Events](#events)
--   [Order Risks](#order-risks)
--   [Smart Collections](#smart-collections)
--   [Product Variants](#product-variants)
--   [Blogs](#blogs)
--   [Application Credits](#application-credits)
--   [Articles](#articles)
--   [Discounts](#discounts)
--   [Policies](#policies)
--   [ShippingZones](#shipping-zones)
--   [GiftCards](#gift-cards)
--   [Price Rules](#price-rules)
--   [User](#users)
--   [Abandoned Checkouts](#abandoned-checkouts)
--   CustomerSavedSearch (docs not yet written)
--   [Draft Orders](#draft-orders)
--   [Access Scopes](#access-scopes)
--   [Checkouts](#checkouts)
--   [Collections](#collections)
--   [StorefrontAccessTokens](#storefrontaccesstokens)
+-   Online Store
+    -   [Articles](#articles)
+    -   [Assets](#assets)
+    -   [Blogs](#blogs)
+    -   Comment (not implimented yet)
+    -   [Pages](#pages)
+    -   [Redirects](#redirects)
+    -   [Script Tags](#script-tags)
+    -   [Themes](#themes)
+-   Orders
+    -   [Abandoned Checkouts](#abandoned-checkouts)
+    -   [Draft Orders](#draft-orders)
+    -   [Orders](#orders)
+    -   [Order Risks](#order-risks)
+    -   Refund (docs not yet written)
+    -   [Transactions](#transactions)
+-   Plus
+    -   [GiftCards](#gift-cards)
+    -   [User](#users)
+-   Products
+    -   [Collects](#collects)
+    -   [Collections](#collections)
+    -   [Custom Collections](#custom-collections)
+    -   [Products](#products)
+    -   [Product Images](#product-images)
+    -   [Product Variants](#product-variants)
+    -   [Smart Collections](#smart-collections)
+-   Sales Channels
+    -   [Checkouts](#checkouts)
+    -   Collection Listing (not implimented yet)
+    -   Mobile Platform Application (not implimented yet)
+    -   Payment (not implimented yet)
+    -   Product Resource Feedback (not implimented yet)
+    -   Product Listing (not implimented yet)
+    -   Resource Feedback (not implimented yet)
+-   Shipping and Fulfillment
+    -   [Assigned Fulfillment Orders](#assigned-fulfillment-orders)
+    -   Cancellation Request (not implimented yet)
+    -   Carrier Service (docs not yet written)
+    -   [Fulfillments](#fulfillments)
+    -   [Fulfillment Events](#fulfillment-events)
+    -   [Fulfillment Orders](#fulfillment-orders) (List/Get/Close only. Scheduling not implemented yet)
+    -   [Fulfillment Requests](#fulfillment-requests)
+    -   [Fulfillment Services](#fulfillment-services)
+    -   Locations For Move (not implimented yet)
+-   Shopify Payments
+    -   Balance (docs not yet written)
+    -   Dispute (docs not yet written)
+    -   Payouts (docs not yet written)
+    -   Transactions (docs not yet written)
+-   Store Properties
+    -   Country (docs not yet written)
+    -   Currency (not implimented yet)
+    -   [Policies](#policies)
+    -   Province (not implimented yet)
+    -   [Shipping Zones](#shipping-zones)
+    -   [Shops](#shops)
+-   [Tender Transactions](#tender-transactions)
+-   [Multipass (Shopify Plus)](#multipass)
 
 More functionality will be added each week until it reaches full parity with Shopify's REST API.
 
@@ -621,13 +664,16 @@ IEnumerable<Order> orders = await service.ListOrdersForCustomerAsync(customerId)
 
 ### Searching customers
 
-```c#
-var service =  new CustomerService(myShopifyUrl, shopAccessToken);
-IEnumerable<Customer> customers = await Service.SearchAsync("Jane country:United States");
+Use a `CustomerSearchListFilter` to perform searches for customers. There is a noticeable 3-30 second delay between creating a new customer and Shopify indexing it for a search.
 
-//Searches for a customer from the United States with a name like 'Jane'.
-//There is a noticeable 3-30 second delay between creating a customer and Shopify
-//indexing it for a search.
+```c#
+var service = new CustomerService(myShopifyUrl, shopAccessToken); 
+var filter = new CustomerSearchListFilter
+{
+  //Searches for a customer from the United States with a name like 'Jane'.
+  Query = "Jane country:United States"
+};
+IEnumerable<Customer> customers = await Service.SearchAsync(filter);
 ```
 
 ## Orders
@@ -1208,7 +1254,13 @@ var filteredCollects = await service.CountAsync(new CollectFilterOptions()
 });
 ```
 
+---
+
 ## Fulfillments
+
+> **NOTE**: Shopify has changed how fulfillments are done in API version **2022-07 and above**. This takes affect in [ShopifySharp versions **5.19.0 and above**](#API-support). If you're using these versions of ShopifySharp, you should use fulfillment orders to create fulfillments, rather than the `FulfillmentService`. 
+> 
+> [Follow the example code in this issue](https://github.com/nozzlegear/ShopifySharp/issues/828) until our fulfillment documentation is updated.
 
 A fulfillment represents a shipment of one or more items in an order. All fulfillments are tied to a single order.
 
@@ -1324,6 +1376,205 @@ var service = new FulfillmentService(myShopifyUrl, shopAccessToken);
 await service.CancelAsync(orderId, fulfillmentId)
 ```
 
+---
+
+## Assigned Fulfillment Orders
+
+The AssignedFulfillmentOrder resource allows you to retrieve all the fulfillment orders that are assigned to an app at the shop level.
+
+### Listing assigned fulfillment orders
+
+Retrieves a list of fulfillment orders on a shop for a specific app.
+
+```c#
+var service = new AssignedFulfillmentOrderService(myShopifyUrl, shopAccessToken);
+
+//Optionally filter the list to only those assigned fulfillments with a specific status
+var filterStatus = new AssignedFulfillmentOrderFilter()
+{
+    AssignmentStatus = "fulfillment_requested"
+});
+
+var assignedFulfillments = await service.ListAsync(filterStatus);
+```
+
+---
+
+## Fulfillment Events
+
+The FulfillmentEvent resource represents tracking events that belong to a fulfillment of one or more items in an order.
+
+### Creates a fulfillment event
+
+Creates a new FulfillmentEvent on the fulfillment.
+
+```c#
+var service = new FulfillmentEventService(myShopifyUrl, shopAccessToken);
+var fulfillmentEvent = new FulfillmentEvent()
+{
+    OrderId = 1234532,
+    FulfillmentId = 156185165,
+    Status = "confirmed"
+}
+
+fulfillmentEvent = await service.CreateAsync(orderId, fulfillmentId, fulfillmentEvent);
+```
+
+### List fulfillment events
+
+Retrieves a list of fulfillment events for a specific fulfillment
+
+```c#
+var service = new FulfillmentEventService(myShopifyUrl, shopAccessToken);
+var fulfillmentEvents = await service.ListAsync(orderId, fulfillmentId);
+```
+
+### Get a Fulfillment Event
+
+Retrieves a specific fulfillment event
+
+```c#
+var service = new FulfillmentEventService(myShopifyUrl, shopAccessToken);
+var fulfillmentEvent = await service.GetAsync(orderId, fulfillmentId, fulfillmentEventId);
+```
+
+### Delete A Fulfillment Event
+
+```cs
+var service = new FulfillmentEventService(myShopifyUrl, shopAccessToken);
+await service.DeleteAsync(orderId, fulfillmentId, fulfillmentEventId)
+```
+
+--
+
+## Fulfillment Orders
+
+The FulfillmentOrder resource represents either an item or a group of items in an order that are to 
+be fulfilled from the same location. There can be more than one fulfillment order for an order at a given location.
+
+> **TODO**
+> - [X] Cancel a fulfillment order
+> - [X] Mark a fulfillment order as incomplete
+> - [ ] Move a fulfillment order to a new location
+> - [ ] Mark the fulfillment order as open
+> - [ ] Reschedule the fulfill_at time of a scheduled fulfillment order
+> - [X] Retrieve a specific fulfillment order
+
+### List Fulfillment Orders
+
+Retrieves a list of fulfillment orders for a specific order
+
+```c#
+var service = new FulfillmentOrderService(myShopifyUrl, shopAccessToken);
+var fulfillmentOrders = await service.ListAsync(orderId);
+```
+
+---
+
+## Fulfillment Requests
+
+The FulfillmentRequest resource represents a fulfillment request made by the merchant to a 
+fulfillment service for a fulfillment order.
+
+### Create A Fulfillment Request
+
+Sends a fulfillment request to the fulfillment service of a fulfillment order
+
+```c#
+var service = new FulfillmentRequestService(myShopifyUrl, shopAccessToken);
+
+// Optionally, you can request only specific item to fulfilled.
+var fulfillmentRequest = new FulfillmentRequest()
+{
+    FulfillmentRequestOrderLineItems = new List<FulfillmentRequestOrderLineItems>(){}
+};
+var fulfillmentOrder = await service.CreateAsync(fulfillmentOrderId, fulfillmentRequest);
+```
+
+### Accept A Fulfillment Request
+
+Accepts a fulfillment request sent to a fulfillment service for a fulfillment order
+
+```c#
+var service = new FulfillmentRequestService(myShopifyUrl, shopAccessToken);
+var fulfillmentOrder = await service.AcceptAsync(fulfillmentOrderId, "Your order will be filled shortly.");
+```
+
+### Reject A Fulfillment Request
+
+Reject a fulfillment request sent to a fulfillment service for a fulfillment order
+
+```c#
+var service = new FulfillmentRequestService(myShopifyUrl, shopAccessToken);
+var fulfillmentOrder = await service.AcceptAsync(fulfillmentOrderId, "Fulfillment services have been suspended for this store.");
+```
+
+---
+
+## Fulfillment Services
+
+A Fulfillment Service is a third party warehouse that prepares and ships orders on behalf of the store owner. 
+Fulfillment services charge a fee to package and ship items and update product inventory levels. 
+Some well known fulfillment services with Shopify integrations include: Amazon, Shipwire, and Rakuten. 
+When an app registers a new FulfillmentService on a store, Shopify automatically creates a Location 
+that's associated to that fulfillment service.
+
+### Create a Fulfillment Service
+
+```c#
+var service = new FulfillmentServiceService(myShopifyUrl, shopAccessToken);
+var fulfillmentService = await service.CreateAsync(new FulfillmentServiceEntity()
+{
+    Name = "Your Company Name", 
+    CallbackUrl = "http://yourcompany.com", 
+    InventoryManagement = true,
+    TrackingSupport = true,
+    FulfillmentOrdersOptIn = true,
+    RequiresShippingMethod = true, 
+    Format = "json"
+});
+```
+
+### List Fulfillment Services
+
+Retrieves a list of fulfillment orders for a specific order
+
+```c#
+var service = new FulfillmentServiceService(myShopifyUrl, shopAccessToken);
+// Optional Filter
+var filter = new FulfillmentServiceListFilter(){ Scope = "all"};
+var fulfillmentServices = await service.ListAsync(filter);
+```
+
+### Get a Fulfillment Service
+
+Retrieves a single Fulfillment Service
+
+```c#
+var service = new FulfillmentServiceService(myShopifyUrl, shopAccessToken);
+// Optional Filter
+var fields = "id,name,email";
+var fulfillmentService = await service.GetAsync(fulfillmentServiceId, fields);
+```
+
+### Modify a Fulfillment Service
+
+Update a Fulfillment Service. Not all fields are updatable
+
+```c#
+var service = new FulfillmentServiceService(myShopifyUrl, shopAccessToken);
+var fulfillmentService = await service.UpdateAsync(fulfillmentServiceId, fulfillmentServiceEntity);
+```
+
+### Delete a Fulfillment Service
+
+```c#
+var service = new FulfillmentServiceService(myShopifyUrl, shopAccessToken);
+var fulfillmentService = await service.DeleteAsync(fulfillmentServiceId);
+```
+
+---
+
 ## Transactions
 
 Transactions are created for every order that results in an exchange of money. All transactions are tied to a single order.
@@ -1419,6 +1670,23 @@ var transactions = await service.ListAsync(orderId);
 
 //Optionally filter the list to those after the given id
 var transactions = await service.ListAsync(orderId, sinceId);
+```
+
+## Tender Transactions
+
+Each tender transaction represents money passing between the merchant and a customer. A tender transaction with a positive amount represents a transaction where the customer paid money to the merchant. A negative amount represents a transaction where the merchant refunded money back to the customer. Tender transactions represent transactions that modify the shop's balance.
+
+### Listing tender transactions
+
+```cs
+var service = new TenderTransactionService(myShopifyUrl, shopAccessToken);
+var tenderTransactions = await service.ListAsync();
+
+//Optionally filter the list to transactions processed after the specified date/time
+var transactions = await service.ListAsync(new TenderTransactionListFilter
+{
+    ProcessedAtMin = DateTimeOffset.Now.AddHours(-1)
+});
 ```
 
 ## Pages
@@ -2550,6 +2818,27 @@ var service = new StorefrontAccessTokenService(myShopifyUrl, shopAccessToken);
 var list = await service.ListAsync();
 ```
 
+## Multipass
+
+Multipass login is for store owners who have a separate website and a Shopify store. It redirects users from the website to the Shopify store and seamlessly logs them in with the same email address they used to sign up for the original website. If no account with that email address exists yet, one is created. There is no need to synchronize any customer databases.
+
+### Creating a Multipass redirect url
+
+To create a multipass redirect url 
+
+```cs
+string url = MultipassService.GetMultipassUrl(
+	new Customer() {
+		Email = "test@example.com",
+		MultipassIdentifier = Guid.Tostring(),
+		CreatedAt = DateTimeOffset.Now
+		....
+	},
+	Utils.MyShopifyUrl,
+	Utils.AccessToken
+);
+```
+
 # Handling Shopify's API rate limit
 
 The Shopify API allows for an average of 2 API calls per second, with a burst limit of up to 40 API calls. Once you hit that 40 burst limit, Shopify will return a 429 Too Many Requests result. The limit is there to prevent you and thousands of other developers from overloading Shopify's servers by going hard in the paint with hundreds of requests every second. Unfortunately, it's pretty easy to write a `for` loop while trying to close a list of orders, and then start getting exceptions after closing the first 40.
@@ -2643,26 +2932,6 @@ Enums would be much better suited to ShopifySharp if Shopify themselves used API
 
 What were previously enums in ShopifySharp 1.x and 2.x are now string properties. This change will prevent breaking your app when an enum value changes, and will allow you to quickly update your app when a new enum value is released without waiting on an update to ShopifySharp first.
 
-# Tests
+# Contributing to ShopifySharp
 
-The test suite relies on your own Shopify credentials, including your Shopify API key, a shop's \*.myshopify.com URL, and an access
-token with full permissions for that shop. [This blog post](https://nozzlegear.com/blog/generating-shopify-authorization-credentials)
-will show you exactly what you need to do to get a shop access token with full permissions.
-
-Once you have those credentials you'll need to the following keys/values to your environment variables:
-
-```
-SHOPIFYSHARP_API_KEY = value
-
-SHOPIFYSHARP_SECRET_KEY = value
-
-SHOPIFYSHARP_ACCESS_TOKEN = value
-
-SHOPIFYSHARP_MY_SHOPIFY_URL = value
-```
-
-**New features will not be published until they have test coverage**. If you'd like your pull request to be published, make sure you write tests for it!
-
-ShopifySharp is now using [xUnit](https://xunit.github.io/) for tests. New tests should all follow the format of other tests in 4.0. You can use the [Article](https://github.com/nozzlegear/ShopifySharp/blob/master/ShopifySharp.Tests/Article_Tests.cs) test as an example, **but I would highly recommend that you [use the provided ShopifySharp Test snippet in the VSCode folder instead](https://github.com/nozzlegear/ShopifySharp/blob/master/.vscode/snippets.csharp.json)**. Create a new `*_Tests.cs` file and type `test-shopifysharp` in VSCode:
-
-![shopifysharp-test](https://cloud.githubusercontent.com/assets/2417276/25457929/94bc71dc-2a9d-11e7-80ac-72352715504e.gif)
+Check out our [contribution guide](https://github.com/nozzlegear/ShopifySharp/blob/master/docs/contribution-guide.md) for guidance on contributing new features, services, classes and bugfixes to ShopifySharp! The guide also contains details on how to set up and run ShopifySharp's test suite.

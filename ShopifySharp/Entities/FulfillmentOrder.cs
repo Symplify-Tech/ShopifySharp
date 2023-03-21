@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using ShopifySharp.Entities;
 
 namespace ShopifySharp
 {
@@ -29,14 +28,7 @@ namespace ShopifySharp
         public long? AssignedLocationId { get; set; }
 
         /// <summary>
-        /// "mars-fulfillment".
-        /// </summary>
-        [JsonProperty("fulfillment_service_handle")]
-        [Obsolete("FulfillmentServiceHandle is deprecated and will be removed in a future release.")]
-        public string FulfillmentServiceHandle { get; set; }
-
-        /// <summary>
-        /// The status of the fulfillment order. 
+        /// The status of the fulfillment order.
         /// </summary>
         [JsonProperty("request_status")]
         public string RequestStatus { get; set; }
@@ -70,6 +62,12 @@ namespace ShopifySharp
         public IEnumerable<string> SupportedActions { get; set; }
 
         /// <summary>
+        /// Followings actions can be performed on this fulfillment order.
+        /// </summary>
+        [JsonProperty("outgoing_requests")]
+        public IEnumerable<OutgoingRequest> OutgoingRequests { get; set; }
+
+        /// <summary>
         /// A list of requests sent by the merchant to the fulfillment service for this fulfillment order.
         /// </summary>
         [JsonProperty("merchant_requests")]
@@ -80,5 +78,38 @@ namespace ShopifySharp
         /// </summary>
         [JsonProperty("assigned_location")]
         public AssignedLocation AssignedLocation { get; set; }
+
+        /// <summary>
+        /// The type of method used to transfer a product or service to a customer
+        /// </summary>
+        [JsonProperty("delivery_method")]
+        public DeliveryMethod DeliveryMethod { get; set; }
+
+        /// <summary>
+        /// The datetime (in UTC) when the fulfillment order is ready for fulfillment. When this datetime is reached, a scheduled fulfillment
+        /// order is automatically transitioned to open. For more information about fulfillment statuses, refer to the status property.
+        /// </summary>
+        [JsonProperty("fulfill_at")]
+        public DateTimeOffset? FulfillAt { get; set; }
+
+        /// <summary>
+        /// The latest date and time by which all items in the fulfillment order need to be fulfilled.
+        /// </summary>
+        [JsonProperty("fulfill_by")]
+        public DateTimeOffset? FulfilledBy { get; set; }
+
+        /// <summary>
+        /// A list of requests sent by the merchant to the fulfillment service for this fulfillment order.
+        /// </summary>
+        [JsonProperty("fulfillment_holds")]
+        public IEnumerable<FulfillmentHold> FulfillmentHolds { get; set; }
+
+        /// <summary>
+        /// The international duties relevant to the fulfillment order. The method of duties payment.Valid values:
+        /// <br>DAP: Delivered at place.</br>
+        /// <br>DDP: Delivered duty paid.</br>
+        /// </summary>
+        [JsonProperty("international_duties")]
+        public FulfillmentInternationalDuties InternationalDuties { get; set; }
     }
 }

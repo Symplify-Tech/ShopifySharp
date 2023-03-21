@@ -11,34 +11,21 @@ using Newtonsoft.Json.Linq;
 using ShopifySharp.Enums;
 using ShopifySharp.Infrastructure;
 using Microsoft.Extensions.Primitives;
-using System.Text.RegularExpressions;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Web;
 
 namespace ShopifySharp
 {
     public static class AuthorizationService
     {
-        private static readonly Regex _querystringRegex = new Regex(@"[?|&]([\w\.]+)=([^?|^&]+)", RegexOptions.Compiled);
-
-        /// <remarks>
-        /// Source for this method: https://stackoverflow.com/a/22046389
-        /// </remarks>
+        /// <summary>
+        /// Parses a querystring into a dictionary.
+        /// </summary>
         public static IDictionary<string, string> ParseRawQuerystring(string qs)
         {
-            // Must use an absolute uri, else Uri.Query throws an InvalidOperationException
-            var uri = new UriBuilder("http://localhost:3000")
-            {
-                Query = Uri.UnescapeDataString(qs)
-            }.Uri;
-            var match = _querystringRegex.Match(uri.PathAndQuery);
-            var paramaters = new Dictionary<string, string>();
-            while (match.Success)
-            {
-                paramaters.Add(match.Groups[1].Value, match.Groups[2].Value);
-                match = match.NextMatch();
-            }
-            return paramaters;
+            var parsed = HttpUtility.ParseQueryString(qs);
+            return parsed.AllKeys.ToDictionary(k => k, k => parsed[k]);
         }
 
         private static string EncodeQuery(string key, StringValues values, bool isKey)
@@ -103,7 +90,7 @@ namespace ShopifySharp
             // 3. Replace & with %26, % with %25 in keys and values.
             // 4. Replace = with %3D in keys only.
             // 5. Join each key and value with = (key=value).
-            // 6. Sorty kvps alphabetically.
+            // 6. Sort kvps alphabetically.
             // 7. Join kvps together with & (key=value&key=value&key=value).
             // 8. Compute the kvps with an HMAC-SHA256 using the secret key.
             // 9. Request is authentic if the computed string equals the `hash` in query string.
@@ -182,7 +169,7 @@ namespace ShopifySharp
         }
 
         /// <summary>
-        /// Determines if an incoming proxy page request is authentic. Conceptually similar to <see cref="IsAuthenticRequest(NameValueCollection, string)"/>,
+        /// Determines if an incoming proxy page request is authentic. Conceptually similar to <see cref="IsAuthenticRequest(string, string)"/>,
         /// except that proxy requests use HMACSHA256 rather than MD5.
         /// </summary>
         /// <param name="querystring">A dictionary containing the keys and values from the request's querystring.</param>
@@ -403,6 +390,44 @@ namespace ShopifySharp
                 client_id = shopifyApiKey,
                 client_secret = shopifySecretKey,
                 code,
+            });
+
+            using (var client = new HttpClient())
+            using (var msg = new CloneableRequestMessage(ub.Uri, HttpMethod.Post, content))
+            {
+                var request = client.SendAsync(msg);
+                var response = await request;
+                var rawDataString = await response.Content.ReadAsStringAsync();
+
+                ShopifyService.CheckResponseExceptions(response, rawDataString);
+
+                var json = JToken.Parse(rawDataString);
+                return new AuthorizationResult(json.Value<string>("access_token"), json.Value<string>("scope").Split(','));
+            }
+        }
+
+        /// <summary>
+        /// Refreshes an existing store access token using the app's client secret and a refresh token
+        /// For more info on rotating tokens, see https://shopify.dev/apps/auth/oauth/rotate-revoke-client-credentials
+        /// </summary>
+        /// <param name="myShopifyUrl">The store's *.myshopify.com url</param>
+        /// <param name="clientId">The app's client ID, also known as API key</param>
+        /// <param name="clientSecret">The app's secret key</param>
+        /// <param name="refreshToken">The app's refresh token</param>
+        /// <param name="existingStoreAccessToken">The existing store access token</param>
+        /// <returns></returns>
+        public static async Task<AuthorizationResult> RefreshAccessToken(string myShopifyUrl, string clientId, string clientSecret, string refreshToken, string existingStoreAccessToken)
+        {
+            var ub = new UriBuilder(ShopifyService.BuildShopUri(myShopifyUrl, false))
+            {
+                Path = "admin/oauth/access_token"
+            };
+            var content = new JsonContent(new
+            {
+                client_id = clientId,
+                client_secret = clientSecret,
+                refresh_token = refreshToken,
+                access_token = existingStoreAccessToken
             });
 
             using (var client = new HttpClient())

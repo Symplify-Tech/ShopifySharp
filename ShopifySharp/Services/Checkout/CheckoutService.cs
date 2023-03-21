@@ -52,20 +52,18 @@ namespace ShopifySharp
         /// <summary>
         /// Creates a new Checkout.
         /// </summary>
-        [Obsolete("This endpoint does not appear to be documented by Shopify. It may no longer work, use with caution. This method may be removed in a future version of ShopifySharp.")]
         public virtual async Task<Checkout> CreateAsync(Checkout checkout, CancellationToken cancellationToken = default)
         {
-            var req = PrepareRequest("checkout.json");
+            var req = PrepareRequest("checkouts.json");
             var body = checkout.ToDictionary();
 
-            var response = await ExecuteRequestAsync<Checkout>(req, HttpMethod.Post, cancellationToken, new JsonContent(checkout), "checkout");
+            var response = await ExecuteRequestAsync<Checkout>(req, HttpMethod.Post, cancellationToken, new JsonContent(new { checkout }), "checkout");
             return response.Result;
         }
 
         /// <summary>
         /// Completes a checkout without requiring payment.
         /// </summary>
-        [Obsolete("This endpoint does not appear to be documented by Shopify. It may no longer work, use with caution. This method may be removed in a future version of ShopifySharp.")]
         public virtual async Task<Checkout> CompleteAsync(string token, CancellationToken cancellationToken = default)
         {
             var req = PrepareRequest($"checkouts/{token}/complete.json");
@@ -77,7 +75,6 @@ namespace ShopifySharp
         /// <summary>
         /// Gets an existing, processing or completed checkout.
         /// </summary>
-        [Obsolete("This endpoint does not appear to be documented by Shopify. It may no longer work, use with caution. This method may be removed in a future version of ShopifySharp.")]
         public virtual async Task<Checkout> GetAsync(string token, CancellationToken cancellationToken = default)
         {
             var req = PrepareRequest($"checkouts/{token}.json");
@@ -89,12 +86,11 @@ namespace ShopifySharp
         /// <summary>
         /// Updates an existing checkout based on the token id.
         /// </summary>
-        [Obsolete("This endpoint does not appear to be documented by Shopify. It may no longer work, use with caution. This method may be removed in a future version of ShopifySharp.")]
         public virtual async Task<Checkout> UpdateAsync(string token, Checkout updatedCheckout, CancellationToken cancellationToken = default)
         {
             var req = PrepareRequest($"checkouts/{token}.json");
 
-            var response = await ExecuteRequestAsync<Checkout>(req, HttpMethod.Put, cancellationToken, new JsonContent(updatedCheckout), "checkout");
+            var response = await ExecuteRequestAsync<Checkout>(req, HttpMethod.Put, cancellationToken, new JsonContent(new { checkout = updatedCheckout }), "checkout");
             return response.Result;
         }
 
@@ -103,7 +99,6 @@ namespace ShopifySharp
         /// new subtotal price, total tax, and total price in the event that this shipping rate is selected. This can be used to update the UI without performing further API requests. To apply a 
         /// shipping rate, update the checkout's shipping line with the handle of the selected rate. 
         /// </summary>
-        [Obsolete("This endpoint does not appear to be documented by Shopify. It may no longer work, use with caution. This method may be removed in a future version of ShopifySharp.")]
         public virtual async Task<IEnumerable<CheckoutShippingRate>> ListShippingRatesAsync(string token, CancellationToken cancellationToken = default)
         {
             var req = PrepareRequest($"checkouts/{token}/shipping_rates.json");

@@ -4,6 +4,12 @@ on:
   push:
     branches: [ master, setup-github-actions ]
 
+# Cancel any in-progress build/test runs 
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: "Build"
@@ -25,7 +31,6 @@ jobs:
       with:
         dotnet-version: |
           6.0.x
-          3.1.x
 
     - name: Build and pack
       run: fish .github/scripts/build.fish
@@ -54,6 +59,8 @@ jobs:
       SHOPIFYSHARP_API_KEY: "${{ secrets.SHOPIFYSHARP_API_KEY }}"
       SHOPIFYSHARP_SECRET_KEY: "${{ secrets.SHOPIFYSHARP_SECRET_KEY }}"
       SHOPIFYSHARP_MY_SHOPIFY_URL: "${{ secrets.SHOPIFYSHARP_MY_SHOPIFY_URL }}"
+      SHOPIFYSHARP_ORG_ID: "${{ secrets.SHOPIFYSHARP_ORG_ID }}"
+      SHOPIFYSHARP_ORG_TOKEN: "${{ secrets.SHOPIFYSHARP_ORG_TOKEN }}"
 
     steps:
     - name: Checkout branch
@@ -83,6 +90,8 @@ jobs:
       SHOPIFYSHARP_API_KEY: "${{ secrets.SHOPIFYSHARP_API_KEY }}"
       SHOPIFYSHARP_SECRET_KEY: "${{ secrets.SHOPIFYSHARP_SECRET_KEY }}"
       SHOPIFYSHARP_MY_SHOPIFY_URL: "${{ secrets.SHOPIFYSHARP_MY_SHOPIFY_URL }}"
+      SHOPIFYSHARP_ORG_ID: "${{ secrets.SHOPIFYSHARP_ORG_ID }}"
+      SHOPIFYSHARP_ORG_TOKEN: "${{ secrets.SHOPIFYSHARP_ORG_TOKEN }}"
 
     steps:
     - name: Install fish
@@ -128,16 +137,6 @@ jobs:
 
     - name: List files in artifacts folder
       run: ls ./artifacts
-
-    - name: Create Github prerelease
-      # This step will create a new Github prerelease and tag it as `latest`. If a prerelease already exists with the `latest` tag, it will be updated.
-      uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
-        prerelease: true
-        title: "Development build"
-        files: ./artifacts/*
 
     - name: Publish package to Nuget
       # Prerelease packages have a `-b*.nupkg` suffix
